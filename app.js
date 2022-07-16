@@ -7,8 +7,6 @@ const sqlite3 = require("sqlite3");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const format = require("date-fns/format");
-
 const dbPath = path.join(__dirname, "twitterClone.db");
 
 const app = express();
@@ -35,7 +33,7 @@ initializeDBAndServer();
 
 const objectItemsToArray = (dbObject) => {
   const convertedArray = [];
-  dbObject.forEach((name) => convertedArray.push(name.name));
+  dbObject.forEach((username) => convertedArray.push(username.username));
   return { likes: convertedArray };
 };
 
@@ -215,8 +213,8 @@ app.get(
     );
     if (isTweetIdIn) {
       //NEXT Proceed calculate counts
-      const tweetDetails = `SELECT name
-                            FROM like NATURAL JOIN user
+      const tweetDetails = `SELECT username
+                            FROM like INNER JOIN user ON like.user_id=user.user_id
                             WHERE tweet_id=${tweetId};`;
       const tweetStats = await db.all(tweetDetails);
       response.send(objectItemsToArray(tweetStats));
@@ -245,7 +243,7 @@ app.get(
       (tweetIds) => tweetIds.tweet_id === parseInt(tweetId)
     );
     if (isTweetIdIn) {
-      //NEXT Proceed calculate counts
+      //NEXT Proceed to calculate counts
       const tweetDetails = `SELECT name, reply
                             FROM reply NATURAL JOIN user
                             WHERE tweet_id=${tweetId};`;
@@ -286,13 +284,10 @@ app.post("/user/tweets/", authenticateToken, async (request, response) => {
                  WHERE username="${username}";`;
   const userIdOfUser = await db.get(getUserId);
   const { user_id } = userIdOfUser;
-
-  const todayDateTime = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-  const postingTweetQuery = `INSERT INTO tweet(tweet, user_id, date_time)
+  const postingTweetQuery = `INSERT INTO tweet(tweet, user_id)
                          VALUES(
                              "${tweet}",
-                             ${user_id},
-                             "${todayDateTime}"
+                             ${user_id}
                              );`;
   await db.run(postingTweetQuery);
   response.send("Created a Tweet");
